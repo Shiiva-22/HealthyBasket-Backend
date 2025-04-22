@@ -49,10 +49,13 @@ app.use(express.static(path.join(__dirname, "../frontend/public")));
 // });
 
 
-
-
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server Running At http://0.0.0.0:${PORT}`);
 });
+
+
+
+
 
