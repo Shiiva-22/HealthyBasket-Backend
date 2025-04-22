@@ -50,6 +50,9 @@ app.use(express.static(path.join(__dirname, "../frontend/public")));
 
 
 
-app.listen(process.env.PORT, "localHost", () => {
-  console.log(`Server Running At http://localhost:${process.env.PORT}`);
+
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server Running At http://0.0.0.0:${PORT}`);
 });
+
