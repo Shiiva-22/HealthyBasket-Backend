@@ -40,13 +40,13 @@ app.use("/api/user", userRoutes);
 app.use("/api/product", productRoute);
 app.use("/api/category", categoryRoute);
 
-//Access Front End Static Files
-app.use(express.static(path.join(__dirname, "../frontend/public")));
+// //Access Front End Static Files
+// app.use(express.static(path.join(__dirname, "../frontend/public")));
 
-//Access Front End All URL
-app.get("/*", (req, res) => {
-  res.sendFile(path.resolve(__dirname, "../frontend/public/index.html"));
-});
+// //Access Front End All URL
+// app.get("/*", (req, res) => {
+//   res.sendFile(path.resolve(__dirname, "../frontend/public/index.html"));
+// });
 
 
 const PORT = process.env.PORT || 5000;
