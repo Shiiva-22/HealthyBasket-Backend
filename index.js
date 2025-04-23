@@ -44,9 +44,9 @@ app.use("/api/category", categoryRoute);
 app.use(express.static(path.join(__dirname, "../frontend/public")));
 
 //Access Front End All URL
-// app.get("/*", (req, res) => {
-//   res.sendFile(path.resolve(__dirname, "../frontend/public/index.html"));
-// });
+app.get("/*", (req, res) => {
+  res.sendFile(path.resolve(__dirname, "../frontend/public/index.html"));
+});
 
 
 const PORT = process.env.PORT || 5000;
