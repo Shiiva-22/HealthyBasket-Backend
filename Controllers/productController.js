@@ -139,10 +139,10 @@ const getAllProduct = async (req, res) => {
   }
 };
 
-//Retrieve First Five Products
+//Retrieve First Ten Recent Products
 const getRecentProducts = async (req, res) => {
   try {
-    const products = await productModel.find().sort({ date: -1 }).limit(10);
+    const products = await productModel.find().sort({ createdAt: -1 }).limit(10); // ✅ Use createdAt
     res.status(200).json({
       success: true,
       products,
