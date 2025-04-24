@@ -2,115 +2,150 @@ const productModel = require("../models/productModel");
 const orderModel = require("../models/orderModel");
 const sendError = require("../utils/sendError");
 
+// Create new order
 const newOrder = async (req, res) => {
   try {
     const { cartItems, shippingInfo, userId, total } = req.body;
+
+    if (!cartItems || !shippingInfo || !userId || !total) {
+      return sendError(res, 400, "Missing required order fields");
+    }
+
     const newOrder = await orderModel.create({
       user: userId,
-      shippingInfo: shippingInfo,
-      total: total,
+      shippingInfo,
+      total,
     });
+
     newOrder.orderItems = cartItems;
     await updateStock(cartItems);
     await newOrder.save();
+
     res.status(200).json({
       success: true,
       newOrder,
     });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      error,
-    });
+    console.error("Order Creation Error:", error);
+    sendError(res, 400, error.message || "Failed to create new order");
   }
 };
 
-//update stock
-const updateStock = (cartItems) => {
-  cartItems.map(async (item) => {
-    const product = await productModel.findById(item.id);
-    product.stocks = product.stocks - item.quantity;
-    await product.save();
-  });
+// Update stock
+const updateStock = async (cartItems) => {
+  await Promise.all(
+    cartItems.map(async (item) => {
+      const product = await productModel.findById(item.id);
+      if (!product) {
+        throw new Error(`Product with ID ${item.id} not found`);
+      }
+
+      product.stocks -= item.quantity;
+
+      if (product.stocks < 0) {
+        throw new Error(`Insufficient stock for ${product.name}`);
+      }
+
+      await product.save();
+    })
+  );
 };
 
-//Get Customer Orders
+// Get user's orders
 const getMyOrders = async (req, res) => {
   try {
     const userId = req.user._id;
-    if (userId) {
-      const orders = await orderModel.find({ user: userId }).sort({ _id: -1 });
-      res.status(200).json({
-        success: true,
-        message: "Orders Get SuccessFully",
-        myOrders: orders,
-      });
-    } else {
-      sendError(res, 400, "Invalid User Id ");
+
+    if (!userId) {
+      return sendError(res, 400, "Invalid user ID");
     }
+
+    const orders = await orderModel.find({ user: userId }).sort({ _id: -1 });
+
+    res.status(200).json({
+      success: true,
+      message: "Orders retrieved successfully",
+      myOrders: orders,
+    });
   } catch (error) {
-    sendError(res, 400, "Somethings Is Wrong..!!");
+    console.error("Fetching Orders Error:", error);
+    sendError(res, 400, "Something went wrong while fetching orders");
   }
 };
 
-//Get Customer Order Details
+// Get order details by ID
 const getOrderDetails = async (req, res) => {
   try {
     const { orderId } = req.params;
-    if (orderId) {
-      const order = await orderModel.findById(orderId);
-      res.status(200).json({
-        success: true,
-        order,
-      });
-    } else {
-      sendError(res, 400, "Invalid OrderId..!!");
+
+    if (!orderId) {
+      return sendError(res, 400, "Invalid order ID");
     }
+
+    const order = await orderModel.findById(orderId);
+
+    if (!order) {
+      return sendError(res, 404, "Order not found");
+    }
+
+    res.status(200).json({
+      success: true,
+      order,
+    });
   } catch (error) {
-    console.log(error.message);
-    sendError(res, 400, "Somethings Is Wrong..!!");
+    console.error("Get Order Details Error:", error);
+    sendError(res, 400, "Something went wrong while retrieving order");
   }
 };
 
-//get all orders admin
+// Admin: Get all orders
 const adminAllOrders = async (req, res) => {
   try {
-    const OrdersCount = await orderModel.find().countDocuments();
+    const OrdersCount = await orderModel.countDocuments();
     const AllOrders = await orderModel
       .find()
       .sort({ _id: -1 })
       .populate("user");
+
     res.status(200).json({
       success: true,
       AllOrders,
       OrdersCount,
-      message: "All Orders Get SuccessFully..!!",
+      message: "All orders retrieved successfully",
     });
   } catch (error) {
-    console.log(error);
-    sendError(res, 400, "Somethings Went's Wrong..!!");
+    console.error("Admin Get All Orders Error:", error);
+    sendError(res, 400, "Something went wrong while fetching all orders");
   }
 };
 
-//Admin Update Order
+// Admin: Update order status
 const AdminUpdateOrder = async (req, res) => {
   try {
     const { orderId } = req.params;
-    if (orderId) {
-      const updatedOrder = await orderModel.findById(orderId);
-      updatedOrder.status = req.body.oStatus;
-      await updatedOrder.save();
-      res.status(200).json({
-        success: true,
-        message: "Order Updated..!!",
-        updatedOrder,
-      });
-    } else {
-      sendError(res, 404, "Order Id Not Found");
+    const { oStatus } = req.body;
+
+    if (!orderId || !oStatus) {
+      return sendError(res, 400, "Order ID and status are required");
     }
+
+    const updatedOrder = await orderModel.findById(orderId);
+
+    if (!updatedOrder) {
+      return sendError(res, 404, "Order not found");
+    }
+
+    updatedOrder.status = oStatus;
+    await updatedOrder.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Order updated successfully",
+      updatedOrder,
+    });
   } catch (error) {
-    console.log(error.message);
-    sendError(res, 400, "Somethings Went,s To Wrong..!!");
+    console.error("Admin Update Order Error:", error);
+    sendError(res, 400, "Something went wrong while updating order");
   }
 };
 
