@@ -11,19 +11,20 @@ const newOrder = async (req, res) => {
       return sendError(res, 400, "Missing required order fields");
     }
 
-    const newOrder = await orderModel.create({
+    // Create order with cart items directly
+    const order = await orderModel.create({
       user: userId,
       shippingInfo,
       total,
+      orderItems: cartItems,
     });
 
-    newOrder.orderItems = cartItems;
+    // Update product stock after order is saved
     await updateStock(cartItems);
-    await newOrder.save();
 
     res.status(200).json({
       success: true,
-      newOrder,
+      newOrder: order,
     });
   } catch (error) {
     console.error("Order Creation Error:", error);
@@ -35,9 +36,13 @@ const newOrder = async (req, res) => {
 const updateStock = async (cartItems) => {
   await Promise.all(
     cartItems.map(async (item) => {
-      const product = await productModel.findById(item.id);
+      const product = await productModel.findById(item.id); // Make sure `item.id` is correct
       if (!product) {
         throw new Error(`Product with ID ${item.id} not found`);
+      }
+
+      if (item.quantity <= 0) {
+        throw new Error(`Invalid quantity for product ${product.name}`);
       }
 
       product.stocks -= item.quantity;
@@ -82,7 +87,7 @@ const getOrderDetails = async (req, res) => {
       return sendError(res, 400, "Invalid order ID");
     }
 
-    const order = await orderModel.findById(orderId);
+    const order = await orderModel.findById(orderId).populate("user"); // Populate if user info is needed
 
     if (!order) {
       return sendError(res, 404, "Order not found");
@@ -101,16 +106,16 @@ const getOrderDetails = async (req, res) => {
 // Admin: Get all orders
 const adminAllOrders = async (req, res) => {
   try {
-    const OrdersCount = await orderModel.countDocuments();
-    const AllOrders = await orderModel
+    const ordersCount = await orderModel.countDocuments();
+    const allOrders = await orderModel
       .find()
       .sort({ _id: -1 })
       .populate("user");
 
     res.status(200).json({
       success: true,
-      AllOrders,
-      OrdersCount,
+      allOrders,
+      ordersCount,
       message: "All orders retrieved successfully",
     });
   } catch (error) {
@@ -120,7 +125,7 @@ const adminAllOrders = async (req, res) => {
 };
 
 // Admin: Update order status
-const AdminUpdateOrder = async (req, res) => {
+const adminUpdateOrder = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { oStatus } = req.body;
@@ -154,5 +159,5 @@ module.exports = {
   getMyOrders,
   getOrderDetails,
   adminAllOrders,
-  AdminUpdateOrder,
+  adminUpdateOrder,
 };
